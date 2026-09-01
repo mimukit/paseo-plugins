@@ -8,7 +8,7 @@ Build order: kit launcher first, then the docs attachment source. Both are clien
 
 Every plugin is a directory with `paseo-plugin.json` (only `id` is required) and an `index.ts` that default-exports `contribute(plugin: PluginContext)` and returns a cleanup function. UI lives in `*.client.tsx`, which Paseo keeps out of the daemon bundle. React, React Native, TanStack Query and Zod come from the runtime, so no bundler is needed for them.
 
-Dev loop: edit, `npm run typecheck`, `paseo plugin reload <id>`, `paseo plugin logs <id>`.
+Dev loop: edit, `pnpm typecheck`, `paseo plugin reload <id>`, `paseo plugin logs <id>`.
 
 ---
 

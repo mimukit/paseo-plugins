@@ -23,8 +23,8 @@ Do not add a bundler. React, React Native, TanStack Query and Zod come from the 
 
 ```sh
 cd <name>
-npm install
-npm run typecheck
+pnpm install
+pnpm typecheck
 ```
 
 Run this before every reload and before you claim the work is done.
@@ -33,7 +33,7 @@ Run this before every reload and before you claim the work is done.
 
 ```sh
 paseo plugin install ~/Github/mimukit/paseo-plugins/<name>
-npm run typecheck && paseo plugin reload <name>
+pnpm typecheck && paseo plugin reload <name>
 paseo plugin logs <name>
 ```
 

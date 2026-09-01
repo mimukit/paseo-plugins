@@ -26,7 +26,7 @@ Install from a local checkout instead, which is what I do while writing one:
 
 ```sh
 paseo plugin install ~/Github/mimukit/paseo-plugins/<plugin-dir>
-npm run typecheck && paseo plugin reload <id>
+pnpm typecheck && paseo plugin reload <id>
 paseo plugin logs <id>
 ```
 

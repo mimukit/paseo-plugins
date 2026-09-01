@@ -39,11 +39,11 @@ The scaffold declares its dev dependencies but does not install them. Install on
 
 ```sh
 cd hello-kit
-npm install
-npm run typecheck
+pnpm install
+pnpm typecheck
 ```
 
-`npm run typecheck` runs `tsc --noEmit`. Run it before every reload.
+`pnpm typecheck` runs `tsc --noEmit`. Run it before every reload.
 
 ## 3. Install it into Paseo
 
@@ -68,7 +68,7 @@ The scaffold registers a surface with `plugin.addSurface("main", MainSurface)`. 
 Edit `main.client.tsx` and change the text. Then run the loop:
 
 ```sh
-npm run typecheck
+pnpm typecheck
 paseo plugin reload hello-kit
 paseo plugin logs hello-kit
 ```
