@@ -18,7 +18,8 @@ export const KITS: readonly Kit[] = [
   { id: "debugkit", title: "debugkit — find the root cause", icon: "Bug", keywords: ["kit", "debug", "root cause", "flaky", "bisect"] },
 ];
 
-export const PILL_KIT_IDS: readonly string[] = ["plankit", "implementkit", "commitkit"];
+// The single pill. It appears only while its workspace has uncommitted changes.
+export const PILL_KIT_ID = "commitkit";
 
 export function kitPrompt(kitId: string): string {
   return `/${kitId}`;
