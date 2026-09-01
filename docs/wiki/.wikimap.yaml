@@ -1,0 +1,24 @@
+home: docs/wiki
+engine: none
+pages:
+  - path: index.md
+    mode: none
+    documents: [README.md, "*/paseo-plugin.json"]
+  - path: getting-started.md
+    mode: tutorial
+    documents: ["*/paseo-plugin.json", "*/package.json", "*/index.ts", "*/main.client.tsx"]
+  - path: how-to/add-a-plugin.md
+    mode: how-to
+    documents: [AGENTS.md, README.md, IDEAS.md, "*/package.json"]
+  - path: how-to/install-a-plugin.md
+    mode: how-to
+    documents: ["*/paseo-plugin.json"]
+  - path: architecture.md
+    mode: explanation
+    documents: ["*/index.ts", "*/*.client.tsx", "*/paseo-plugin.d.ts"]
+  - path: reference.md
+    mode: reference
+    documents: ["*/paseo-plugin.d.ts", "*/paseo-plugin.json", "*/tsconfig.json"]
+  - path: plugin-readme-template.md
+    mode: reference
+    documents: ["*/README.md"]
