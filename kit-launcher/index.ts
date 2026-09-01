@@ -52,7 +52,7 @@ function sendKit(paseo: unknown, agentId: string, kitId: string): void {
 export default function contribute(plugin: PluginContext) {
   for (const kit of KITS) {
     plugin.addCommandCenterItem({
-      id: `kit-launcher.${kit.id}`,
+      id: `kit-launcher-${kit.id}`,
       title: kit.title,
       icon: kit.icon,
       keywords: kit.keywords,
@@ -81,7 +81,7 @@ export default function contribute(plugin: PluginContext) {
       if (agent.status === "closed") return;
       const cleanups = PILL_KIT_IDS.map((kitId) =>
         client.addComposerPill({
-          id: `kit-launcher.pill.${kitId}.${agentId}`,
+          id: `kit-launcher-pill-${kitId}-${agentId}`,
           title: kitId,
           workspaceId,
           agentId,
