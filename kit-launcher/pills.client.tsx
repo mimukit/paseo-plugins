@@ -1,29 +1,25 @@
 import type { PluginComposerPillProps } from "@getpaseo/plugin";
-import React, { useMemo } from "react";
+import React, { useMemo, useState } from "react";
 import { Text, View } from "react-native";
 
+// The host Pressable already draws the pill shape: border, radius, surface1 fill
+// and a surface2 hover fill. This component contributes the label only.
 export function makeKitPill(label: string) {
   return function KitPill({ theme, layout }: PluginComposerPillProps) {
-    const styles = useMemo(
+    const [hovered, setHovered] = useState(false);
+    const style = useMemo(
       () => ({
-        pill: {
-          paddingHorizontal: layout.compact ? 8 : 10,
-          paddingVertical: layout.compact ? 3 : 4,
-          borderRadius: 999,
-          borderWidth: 1,
-          borderColor: theme.colors.border,
-          backgroundColor: theme.colors.surface1,
-        },
-        label: {
-          color: theme.colors.foreground,
-          fontSize: layout.compact ? 12 : 13,
-        },
+        color: hovered ? theme.colors.foreground : theme.colors.foregroundMuted,
+        fontSize: layout.compact ? 12 : 13,
       }),
-      [theme, layout.compact],
+      [theme, layout.compact, hovered],
     );
     return (
-      <View style={styles.pill}>
-        <Text style={styles.label}>{label}</Text>
+      <View
+        onPointerEnter={() => setHovered(true)}
+        onPointerLeave={() => setHovered(false)}
+      >
+        <Text style={style}>{label}</Text>
       </View>
     );
   };
