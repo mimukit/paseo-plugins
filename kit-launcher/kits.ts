@@ -18,7 +18,7 @@ export const KITS: readonly Kit[] = [
   { id: "debugkit", title: "debugkit — find the root cause", icon: "Bug", keywords: ["kit", "debug", "root cause", "flaky", "bisect"] },
 ];
 
-// The single pill. It appears only while its workspace has uncommitted changes.
+// The single pill. It appears only while the agent's working tree is dirty.
 export const PILL_KIT_ID = "commitkit";
 
 export function kitPrompt(kitId: string): string {

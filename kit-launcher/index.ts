@@ -4,15 +4,18 @@ import type {
   PluginClientContext,
   PluginContext,
 } from "@getpaseo/plugin";
+import { isWorkingTreeDirty } from "./git.server";
 import { KITS, PILL_KIT_ID, kitPrompt } from "./kits";
 import { makeKitPill } from "./pills.client";
+import { gitStatus } from "./rpc";
 
 // The scaffold's PaseoApi import resolves loosely against @getpaseo/client 0.4.0,
 // so the agent surface is re-declared here and probed at runtime before use.
-type AgentLike = { id?: string; workspaceId?: string | null; status?: string };
-type WorkspaceLike = {
+type AgentLike = {
   id?: string;
-  diffStat?: { additions?: number; deletions?: number } | null;
+  workspaceId?: string | null;
+  status?: string;
+  cwd?: string | null;
 };
 type PaseoAgents = {
   list(): Promise<{ entries?: unknown[] }>;
@@ -20,9 +23,17 @@ type PaseoAgents = {
   subscribe(handler: (update: unknown) => void): () => void;
 };
 type PaseoWorkspaces = {
-  list(): Promise<{ entries?: unknown[] }>;
   subscribe(handler: (update: unknown) => void): () => void;
 };
+
+// One live agent, with the two fields the pill needs: the workspace it belongs
+// to and the directory whose working tree decides whether the pill shows.
+type TrackedAgent = { workspaceId: string; cwd: string; status: string | null };
+
+// A directory is re-checked at most this often, however many events arrive.
+const REFRESH_FLOOR_MS = 2_000;
+// A commit made outside Paseo raises no event, so re-check on a slow timer too.
+const BACKSTOP_MS = 15_000;
 
 function agentsApiOf(paseo: unknown): PaseoAgents | null {
   const agents = (paseo as { agents?: Partial<PaseoAgents> } | null)?.agents;
@@ -39,30 +50,18 @@ function agentsApiOf(paseo: unknown): PaseoAgents | null {
 
 function workspacesApiOf(paseo: unknown): PaseoWorkspaces | null {
   const workspaces = (paseo as { workspaces?: Partial<PaseoWorkspaces> } | null)?.workspaces;
-  if (
-    workspaces &&
-    typeof workspaces.list === "function" &&
-    typeof workspaces.subscribe === "function"
-  ) {
+  if (workspaces && typeof workspaces.subscribe === "function") {
     return workspaces as PaseoWorkspaces;
   }
   return null;
 }
 
-function workspaceOf(value: unknown): WorkspaceLike | null {
+function workspaceIdOf(value: unknown): string | null {
   if (!value || typeof value !== "object") return null;
-  const record = value as { workspace?: WorkspaceLike; id?: string };
-  if (record.workspace && typeof record.workspace === "object") return record.workspace;
-  if (typeof record.id === "string") return record as WorkspaceLike;
+  const record = value as { workspace?: { id?: string }; id?: string };
+  if (record.workspace && typeof record.workspace.id === "string") return record.workspace.id;
+  if (typeof record.id === "string") return record.id;
   return null;
-}
-
-// The composer indicator counts the same numbers, so the pill and the "+11 -8"
-// badge appear and disappear together.
-function hasUncommittedChanges(workspace: WorkspaceLike): boolean {
-  const diffStat = workspace.diffStat;
-  if (!diffStat) return false;
-  return (diffStat.additions ?? 0) + (diffStat.deletions ?? 0) > 0;
 }
 
 function snapshotOf(value: unknown): AgentLike | null {
@@ -86,6 +85,8 @@ function sendKit(paseo: unknown, agentId: string, kitId: string): void {
 }
 
 export default function contribute(plugin: PluginContext) {
+  plugin.handle(gitStatus, async (input) => ({ dirty: await isWorkingTreeDirty(input.cwd) }));
+
   for (const kit of KITS) {
     plugin.addCommandCenterItem({
       id: `kit-launcher-${kit.id}`,
@@ -110,15 +111,26 @@ export default function contribute(plugin: PluginContext) {
 
     const workspaces = workspacesApiOf(client.paseo);
     if (!workspaces) {
-      console.warn("[kit-launcher] paseo.workspaces surface not found; pills disabled");
-      return () => {};
+      console.warn("[kit-launcher] paseo.workspaces surface not found; pill updates run on the timer only");
     }
 
-    // The pill exists per live agent whose workspace is dirty, so track both
-    // sides and re-evaluate every agent of a workspace when its diff changes.
-    const liveAgents = new Map<string, string>();
-    const dirtyWorkspaces = new Set<string>();
+    // The pill exists per live agent whose working tree is dirty, so track the
+    // agents and the directories separately: two agents can share one directory.
+    const liveAgents = new Map<string, TrackedAgent>();
+    const dirtyDirectories = new Set<string>();
     const pillCleanups = new Map<string, PluginCleanup>();
+
+    const inFlight = new Set<string>();
+    const pendingAgain = new Set<string>();
+    const lastRefreshAt = new Map<string, number>();
+    const scheduled = new Map<string, ReturnType<typeof setTimeout>>();
+
+    // The host drops this installation's pills before it awaits the cleanup
+    // below. A pill added after that point outlives the installation and never
+    // comes off the composer, so every add stops at this flag. A late callback
+    // is the ordinary case here: a `git.status` answer arrives milliseconds
+    // after a plugin reload starts.
+    let stopped = false;
 
     const removePillFor = (agentId: string) => {
       const cleanup = pillCleanups.get(agentId);
@@ -128,9 +140,9 @@ export default function contribute(plugin: PluginContext) {
     };
 
     const syncPillFor = (agentId: string) => {
-      const workspaceId = liveAgents.get(agentId);
-      const wanted = Boolean(workspaceId) && dirtyWorkspaces.has(workspaceId as string);
-      if (!wanted) {
+      if (stopped) return;
+      const agent = liveAgents.get(agentId);
+      if (!agent || !dirtyDirectories.has(agent.cwd)) {
         removePillFor(agentId);
         return;
       }
@@ -140,7 +152,7 @@ export default function contribute(plugin: PluginContext) {
         client.addComposerPill({
           id: `kit-launcher-pill-${PILL_KIT_ID}-${agentId}`,
           title: PILL_KIT_ID,
-          workspaceId: workspaceId as string,
+          workspaceId: agent.workspaceId,
           agentId,
           Component: makeKitPill(`/${PILL_KIT_ID}`),
           onPress: () => sendKit(client.paseo, agentId, PILL_KIT_ID),
@@ -148,44 +160,84 @@ export default function contribute(plugin: PluginContext) {
       );
     };
 
-    const trackAgent = (agent: AgentLike) => {
-      const agentId = agent.id;
-      if (!agentId) return;
-      if (agent.status === "closed" || !agent.workspaceId) {
-        liveAgents.delete(agentId);
-        removePillFor(agentId);
+    const syncPillsIn = (cwd: string) => {
+      for (const [agentId, agent] of liveAgents) {
+        if (agent.cwd === cwd) syncPillFor(agentId);
+      }
+    };
+
+    const requestRefresh = (cwd: string) => {
+      if (stopped || scheduled.has(cwd)) return;
+      const waited = Date.now() - (lastRefreshAt.get(cwd) ?? 0);
+      if (waited >= REFRESH_FLOOR_MS) {
+        runRefresh(cwd);
         return;
       }
-      liveAgents.set(agentId, agent.workspaceId);
+      scheduled.set(
+        cwd,
+        setTimeout(() => {
+          scheduled.delete(cwd);
+          runRefresh(cwd);
+        }, REFRESH_FLOOR_MS - waited),
+      );
+    };
+
+    // The daemon runs `git status` for this directory. Only its answer moves a
+    // pill, so a failed call leaves the last known state in place.
+    function runRefresh(cwd: string): void {
+      if (stopped) return;
+      if (inFlight.has(cwd)) {
+        pendingAgain.add(cwd);
+        return;
+      }
+      inFlight.add(cwd);
+      client
+        .rpc(gitStatus, { cwd })
+        .then((result) => {
+          if (result.dirty) dirtyDirectories.add(cwd);
+          else dirtyDirectories.delete(cwd);
+          syncPillsIn(cwd);
+        })
+        .catch((error) => console.error("[kit-launcher] git status failed", cwd, error))
+        .finally(() => {
+          inFlight.delete(cwd);
+          lastRefreshAt.set(cwd, Date.now());
+          if (pendingAgain.delete(cwd)) requestRefresh(cwd);
+        });
+    }
+
+    const forgetDirectory = (cwd: string) => {
+      for (const agent of liveAgents.values()) {
+        if (agent.cwd === cwd) return;
+      }
+      dirtyDirectories.delete(cwd);
+      lastRefreshAt.delete(cwd);
+      const timer = scheduled.get(cwd);
+      if (timer) {
+        clearTimeout(timer);
+        scheduled.delete(cwd);
+      }
+    };
+
+    const trackAgent = (agent: AgentLike) => {
+      if (stopped) return;
+      const agentId = agent.id;
+      if (!agentId) return;
+      const cwd = typeof agent.cwd === "string" && agent.cwd.length > 0 ? agent.cwd : null;
+      if (agent.status === "closed" || !agent.workspaceId || !cwd) {
+        const dropped = liveAgents.get(agentId);
+        liveAgents.delete(agentId);
+        removePillFor(agentId);
+        if (dropped) forgetDirectory(dropped.cwd);
+        return;
+      }
+      const previous = liveAgents.get(agentId);
+      const status = agent.status ?? null;
+      liveAgents.set(agentId, { workspaceId: agent.workspaceId, cwd, status });
       syncPillFor(agentId);
+      // A turn that ends is the likeliest moment for a new commit or a new edit.
+      if (!previous || previous.cwd !== cwd || previous.status !== status) requestRefresh(cwd);
     };
-
-    const trackWorkspace = (workspace: WorkspaceLike) => {
-      const workspaceId = workspace.id;
-      if (!workspaceId) return;
-      if (hasUncommittedChanges(workspace)) dirtyWorkspaces.add(workspaceId);
-      else dirtyWorkspaces.delete(workspaceId);
-      for (const [agentId, agentWorkspaceId] of liveAgents) {
-        if (agentWorkspaceId === workspaceId) syncPillFor(agentId);
-      }
-    };
-
-    const forgetWorkspace = (workspaceId: string) => {
-      dirtyWorkspaces.delete(workspaceId);
-      for (const [agentId, agentWorkspaceId] of liveAgents) {
-        if (agentWorkspaceId === workspaceId) syncPillFor(agentId);
-      }
-    };
-
-    workspaces
-      .list()
-      .then((result) => {
-        for (const entry of result?.entries ?? []) {
-          const workspace = workspaceOf(entry);
-          if (workspace) trackWorkspace(workspace);
-        }
-      })
-      .catch((error) => console.error("[kit-launcher] workspace list failed", error));
 
     agents
       .list()
@@ -202,19 +254,28 @@ export default function contribute(plugin: PluginContext) {
       if (agent) trackAgent(agent);
     });
 
-    const unsubscribeWorkspaces = workspaces.subscribe((update) => {
-      const record = update as { kind?: string; id?: string } | null;
-      if (record?.kind === "remove" && typeof record.id === "string") {
-        forgetWorkspace(record.id);
-        return;
+    // A workspace update carries the recomputed diff, so it marks the moment the
+    // files under it changed. The directory answer still comes from `git status`.
+    const unsubscribeWorkspaces = workspaces?.subscribe((update) => {
+      const workspaceId = workspaceIdOf(update);
+      if (!workspaceId) return;
+      for (const agent of liveAgents.values()) {
+        if (agent.workspaceId === workspaceId) requestRefresh(agent.cwd);
       }
-      const workspace = workspaceOf(update);
-      if (workspace) trackWorkspace(workspace);
     });
 
+    const backstop = setInterval(() => {
+      for (const agent of liveAgents.values()) requestRefresh(agent.cwd);
+    }, BACKSTOP_MS);
+
     return () => {
+      // The flag goes first. Everything after it can still fire a callback.
+      stopped = true;
+      clearInterval(backstop);
+      for (const timer of scheduled.values()) clearTimeout(timer);
+      scheduled.clear();
       unsubscribeAgents();
-      unsubscribeWorkspaces();
+      unsubscribeWorkspaces?.();
       for (const agentId of [...pillCleanups.keys()]) removePillFor(agentId);
     };
   });
