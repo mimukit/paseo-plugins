@@ -6,12 +6,12 @@ Take a plugin from empty directory to something this repo ships.
 
 ```sh
 cd ~/Github/mimukit/paseo-plugins
-paseo plugin init <name> --id <name>
+paseo plugin init plugins/<name> --id <name>
 ```
 
 Do not hand-write the scaffold. `paseo plugin init` writes `paseo-plugin.d.ts`, which carries the runtime type declarations, and those change with the Paseo version.
 
-The directory name must equal the manifest `id`. `paseo plugin install --path <dir>` takes the directory, and `paseo plugin reload <id>` takes the id. Keeping them the same means one word for both.
+Every plugin lives under `plugins/`, never at the repo root. The directory name must equal the manifest `id`. `paseo plugin install --path <dir>` takes the directory, and `paseo plugin reload <id>` takes the id. Keeping them the same means one word for both.
 
 ## 2. Split client from server
 
@@ -22,7 +22,7 @@ Do not add a bundler. React, React Native, TanStack Query and Zod come from the 
 ## 3. Typecheck
 
 ```sh
-cd <name>
+cd plugins/<name>
 pnpm install
 pnpm typecheck
 ```
@@ -32,7 +32,7 @@ Run this before every reload and before you claim the work is done.
 ## 4. Install and iterate
 
 ```sh
-paseo plugin install ~/Github/mimukit/paseo-plugins/<name>
+paseo plugin install ~/Github/mimukit/paseo-plugins/plugins/<name>
 pnpm typecheck && paseo plugin reload <name>
 paseo plugin logs <name>
 ```

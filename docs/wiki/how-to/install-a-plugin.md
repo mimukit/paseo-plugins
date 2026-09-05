@@ -7,7 +7,7 @@ Get a plugin from this repo into a running Paseo daemon, and manage it afterward
 Use this while you are writing the plugin. The daemon reads the directory in place, so `paseo plugin reload` picks up your edits.
 
 ```sh
-paseo plugin install ~/Github/mimukit/paseo-plugins/<plugin-dir>
+paseo plugin install ~/Github/mimukit/paseo-plugins/plugins/<plugin-dir>
 ```
 
 ## Install from this repo on GitHub
@@ -15,13 +15,13 @@ paseo plugin install ~/Github/mimukit/paseo-plugins/<plugin-dir>
 `install` takes an `owner/repo` shorthand or a Git URL. This repo holds many plugins, so `--path` selects one:
 
 ```sh
-paseo plugin install mimukit/paseo-plugins --path <plugin-dir>
+paseo plugin install mimukit/paseo-plugins --path plugins/<plugin-dir>
 ```
 
 Pin to a branch, tag or commit with `--ref`:
 
 ```sh
-paseo plugin install mimukit/paseo-plugins --path <plugin-dir> --ref v1.0.0
+paseo plugin install mimukit/paseo-plugins --path plugins/<plugin-dir> --ref v1.0.0
 ```
 
 Override the runtime id with `--id` when it must differ from the manifest id. Leave it off in normal use.

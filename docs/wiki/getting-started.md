@@ -18,13 +18,13 @@ Run the init command from the repo root. The directory name and the id must matc
 
 ```sh
 cd ~/Github/mimukit/paseo-plugins
-paseo plugin init hello-kit --id hello-kit
+paseo plugin init plugins/hello-kit --id hello-kit
 ```
 
 You get six files:
 
 ```
-hello-kit/
+plugins/hello-kit/
   paseo-plugin.json    # {"id": "hello-kit"}
   package.json         # devDependencies and a typecheck script
   tsconfig.json
@@ -38,7 +38,7 @@ hello-kit/
 The scaffold declares its dev dependencies but does not install them. Install once, then typecheck:
 
 ```sh
-cd hello-kit
+cd plugins/hello-kit
 pnpm install
 pnpm typecheck
 ```
@@ -50,7 +50,7 @@ pnpm typecheck
 Point the install command at the directory:
 
 ```sh
-paseo plugin install ~/Github/mimukit/paseo-plugins/hello-kit
+paseo plugin install ~/Github/mimukit/paseo-plugins/plugins/hello-kit
 ```
 
 Confirm the daemon picked it up:

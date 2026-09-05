@@ -1,12 +1,13 @@
 
 # Agents Guideline
 
-This repo holds personal Paseo plugins. One directory per plugin, named after the plugin `id`.
+This repo holds personal Paseo plugins. One directory per plugin, named after the plugin `id`, nested under `plugins/`.
 
 ## Convensions
 
 - Read [docs/wiki/architecture.md](docs/wiki/architecture.md) and [docs/wiki/reference.md](docs/wiki/reference.md) before you write or change a plugin. They record the extension points and the rules.
-- Start a new plugin with `paseo plugin init <dir> --id <dir>`. Do not hand-write the scaffold.
+- Put every plugin under `plugins/<id>/`. Never place a plugin directory at the repo root.
+- Start a new plugin with `paseo plugin init plugins/<dir> --id <dir>`. Do not hand-write the scaffold.
 - Keep React components in `*.client.tsx`. Server code goes in `index.ts` and plain `.ts` files.
 - Do not add a bundler. React, React Native, TanStack Query and Zod come from the Paseo runtime.
 - Use `pnpm` for every package command. Never run `npm`, `npx` or `yarn`. Use `pnpm dlx` in place of `npx`.

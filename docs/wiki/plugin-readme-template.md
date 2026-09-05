@@ -15,7 +15,7 @@ One sentence on what it does.
 ## Install
 
 ```sh
-paseo plugin install mimukit/paseo-plugins --path <plugin-dir>
+paseo plugin install mimukit/paseo-plugins --path plugins/<plugin-dir>
 ```
 
 ## Requirements
