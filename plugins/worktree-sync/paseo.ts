@@ -15,13 +15,24 @@ export function isNodeRuntime(): boolean {
   );
 }
 
+// A hung CLI must not wedge the single-flight pass forever, so every spawn
+// carries a hard timeout. The buffer is sized for large project and worktree
+// listings; the node default of 1 MB throws on big fleets.
+const RUN_TIMEOUT_MS = 30_000;
+const RUN_MAX_BUFFER = 16 * 1024 * 1024;
+
 async function run(file: string, args: string[]): Promise<{ stdout: string }> {
   const { execFile } = await import("node:child_process");
   return new Promise((resolvePromise, reject) => {
-    execFile(file, args, (error, stdout) => {
-      if (error) reject(error);
-      else resolvePromise({ stdout: stdout.toString() });
-    });
+    execFile(
+      file,
+      args,
+      { timeout: RUN_TIMEOUT_MS, maxBuffer: RUN_MAX_BUFFER },
+      (error, stdout) => {
+        if (error) reject(error);
+        else resolvePromise({ stdout: stdout.toString() });
+      },
+    );
   });
 }
 

@@ -1,6 +1,6 @@
 import type { PluginHostProps, PluginTheme } from "@getpaseo/plugin";
 import { Icon, useRpc } from "@getpaseo/plugin";
-import React, { useCallback, useEffect, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import { Pressable, ScrollView, Text, View } from "react-native";
 import { getSyncStatus, syncNow, type SyncStatus } from "./contracts";
 
@@ -79,31 +79,43 @@ export function SyncPanel({ theme, layout }: PluginHostProps) {
   const [busy, setBusy] = useState(false);
   const [now, setNow] = useState(() => Date.now());
 
+  // The RPC awaits can outlive the panel. A state update after unmount is a
+  // React warning, so every setter behind an await checks this ref first.
+  const mounted = useRef(true);
+
   const refresh = useCallback(async () => {
     try {
-      setStatus(await fetchStatus({}));
+      const next = await fetchStatus({});
+      if (mounted.current) setStatus(next);
     } catch {
       // The daemon answers on the next poll. A transient RPC failure is not
       // worth replacing the last good status with an error.
     }
-    setNow(Date.now());
+    if (mounted.current) setNow(Date.now());
   }, [fetchStatus]);
 
   const sync = useCallback(async () => {
     setBusy(true);
     try {
-      setStatus(await runSync({}));
+      const next = await runSync({});
+      if (mounted.current) setStatus(next);
     } catch {
       // Same as above; the pass logs its own failures.
     }
-    setBusy(false);
-    setNow(Date.now());
+    if (mounted.current) {
+      setBusy(false);
+      setNow(Date.now());
+    }
   }, [runSync]);
 
   useEffect(() => {
+    mounted.current = true;
     void refresh();
     const poll = setInterval(() => void refresh(), POLL_INTERVAL_MS);
-    return () => clearInterval(poll);
+    return () => {
+      mounted.current = false;
+      clearInterval(poll);
+    };
   }, [refresh]);
 
   const running = busy || status.running;
@@ -156,9 +168,9 @@ export function SyncPanel({ theme, layout }: PluginHostProps) {
           >
             Errors ({status.errors.length})
           </Text>
-          {status.errors.map((error) => (
+          {status.errors.map((error, index) => (
             <Text
-              key={error}
+              key={`${index}-${error}`}
               style={{ color: theme.colors.foregroundMuted, fontSize: 12, marginBottom: 4 }}
             >
               {error}
