@@ -84,8 +84,25 @@ function sendKit(paseo: unknown, agentId: string, kitId: string): void {
     .catch((error) => console.error("[kit-launcher] send failed", kitId, error));
 }
 
+// The daemon checks the requested directory against the live agents before it
+// spawns git. Without this gate, any client code could probe any path on the
+// machine and learn whether it is a dirty git repository.
+async function isAgentCwd(paseo: unknown, cwd: string): Promise<boolean> {
+  const agents = agentsApiOf(paseo);
+  if (!agents) return false;
+  const result = await agents.list();
+  for (const entry of result?.entries ?? []) {
+    const agent = snapshotOf(entry);
+    if (agent && agent.status !== "closed" && agent.cwd === cwd) return true;
+  }
+  return false;
+}
+
 export default function contribute(plugin: PluginContext) {
-  plugin.handle(gitStatus, async (input) => ({ dirty: await isWorkingTreeDirty(input.cwd) }));
+  plugin.handle(gitStatus, async (input, context) => {
+    if (!(await isAgentCwd(context.paseo, input.cwd))) return { dirty: false };
+    return { dirty: await isWorkingTreeDirty(input.cwd) };
+  });
 
   for (const kit of KITS) {
     plugin.addCommandCenterItem({
@@ -234,6 +251,8 @@ export default function contribute(plugin: PluginContext) {
       const previous = liveAgents.get(agentId);
       const status = agent.status ?? null;
       liveAgents.set(agentId, { workspaceId: agent.workspaceId, cwd, status });
+      // The old directory may have no other agent left; drop its cached state.
+      if (previous && previous.cwd !== cwd) forgetDirectory(previous.cwd);
       syncPillFor(agentId);
       // A turn that ends is the likeliest moment for a new commit or a new edit.
       if (!previous || previous.cwd !== cwd || previous.status !== status) requestRefresh(cwd);
