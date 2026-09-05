@@ -1,8 +1,8 @@
 # Paseo plugin ideas
 
-Six plugin ideas drawn from how I already work: skill-driven Claude Code sessions, worktrees under `~/worktrees/`, a plan → grill → issue → implement → review → QA → PR chain, and hooks routed through `~/.local/bin/agent-hook`.
+Eight plugin ideas drawn from how I already work: skill-driven Claude Code sessions, worktrees under `~/worktrees/`, a plan → grill → issue → implement → review → QA → PR chain, and hooks routed through `~/.local/bin/agent-hook`. The kit launcher and worktree-sync shipped and moved to `plugins/`.
 
-Build order: kit launcher first, then the docs attachment source. Both are client-only and cut typing I do every session. The panels come after, once I know the panel API from the inside.
+Build order: the permission triage panel first, then the docs and issue attachment sources. All three are small and cut a real daily wait or real typing. The panels come after, once I know the panel API from the inside.
 
 ## Reference
 
@@ -12,19 +12,19 @@ Dev loop: edit, `pnpm typecheck`, `paseo plugin reload <id>`, `paseo plugin logs
 
 ---
 
-## 1. Kit launcher
+## 1. Permission triage panel
 
-**What it does.** Puts every skill I use on a keyboard shortcut and a tap target. One Command Center entry per kit (plankit, grillkit, issuekit, implementkit, reviewkit, qakit, prkit, statuskit, commitkit, debugkit). Selecting an entry sends the matching `/kitname` prompt to the selected agent. A composer pill does the same in one tap, which matters on the phone.
+**What it does.** Lists every pending permission request across agents, with an allow button and a deny button per row. A blocked agent today waits silently in a background tab. This panel makes the wait visible, and it works well on the phone.
 
-**Extension points.** `addCommandCenterItem` for the searchable list, `addComposerPill` for the four or five kits I reach for most.
+**Extension points.** `addWorkspacePanel` for the view, RPC handlers that call the daemon's `list_pending_permissions` and `respond_to_permission`.
 
-**Where the code runs.** Client only. No `handle()` contract, no server state.
+**Where the code runs.** Server side talks to the daemon. The client renders the list and the two buttons.
 
-**Detail worth getting right.** Some kits take an argument: `/implementkit #42`, `/issuekit start 42`. The launcher should offer a bare-prompt variant and an argument variant, rather than forcing me to edit the composer after the pill fires. Keep the pill set short. A pill row that holds ten items is a menu, not a shortcut.
+**Detail worth getting right.** Poll or refresh often enough that a stale request does not get an answer after the agent moved on. Show the tool name and the exact command in the row, because an allow without the command is a blind approval.
 
-**Effort.** Small. Roughly 50 lines plus the kit table.
+**Effort.** Small.
 
-**Open question.** Does a Command Center item fire the prompt directly, or does it fill the composer and wait for me? Filling and waiting is safer for the kits that start work.
+**Value.** Removes the most common silent wait in a multi-agent session.
 
 ---
 
@@ -74,7 +74,23 @@ Dev loop: edit, `pnpm typecheck`, `paseo plugin reload <id>`, `paseo plugin logs
 
 ---
 
-## 5. QA runner panel
+## 5. Issue attachment source
+
+**What it does.** Makes GitHub issues and PRs attachable by name in the composer. Searches `gh issue list` and `gh pr list` by title and number. Typing "auth" in the picker attaches issue #42 as a reference.
+
+**Extension points.** `addAttachmentSource`.
+
+**Where the code runs.** Server side runs the `gh` calls and builds the result payload. The picker UI comes from Paseo.
+
+**Detail worth getting right.** Cache the list with TanStack Query so the picker does not fire a `gh` call per keystroke. Show the number, the state and the title in each row. Share the picker pattern with the docs attachment source; the two plugins should feel like one feature.
+
+**Effort.** Small.
+
+**Value.** Pairs with the docs source. issuekit, implementkit and mergekit all start from an issue or PR number.
+
+---
+
+## 6. QA runner panel
 
 **What it does.** Renders the newest file in `docs/qa/` as a checklist. Each step becomes a checkbox. The tick state persists per workspace, so I can start a QA pass at the desk and finish it on the phone. Shows a count of steps not yet run.
 
@@ -90,7 +106,23 @@ Dev loop: edit, `pnpm typecheck`, `paseo plugin reload <id>`, `paseo plugin logs
 
 ---
 
-## 6. Hook log panel
+## 7. Verify proof gallery
+
+**What it does.** Lists the verifykit screenshots and GIFs for the current branch in a panel, with a copy button that yields the Markdown for a PR body.
+
+**Extension points.** `addWorkspacePanel`, one RPC handler to list the proof bundle.
+
+**Where the code runs.** Server side reads the proof bundle directory. Client renders the thumbnails and the copy button.
+
+**Detail worth getting right.** Depends on a stable proof bundle path per branch. Confirm what verifykit writes and where before starting. Render GIFs as a static first frame with a tap to play, or a panel with three GIFs will churn on mobile.
+
+**Effort.** Small once the bundle path is confirmed.
+
+**Value.** Closes the gap between "proof captured" and "proof in the PR body" without a file browser.
+
+---
+
+## 8. Hook log panel
 
 **What it does.** Tails the `agent-hook` dispatcher output for the selected session and shows which hook fired, on which tool call, and what it decided. Makes a blocked `rm` or a denied edit legible instead of silent.
 
@@ -112,4 +144,4 @@ Server code runs unsandboxed as the daemon user. Anything that shells out to `gi
 
 Panels render on desktop, browser, iOS and Android. Use `theme.colors.foreground` and `theme.colors.foregroundMuted` rather than fixed colours, and respect `layout.compact`, or the panel breaks on a dark theme or a narrow screen.
 
-Four of the six ideas read state that a skill already knows how to produce. That is the pattern worth following: the skill defines the rule, the plugin shows the result.
+Most of these read state that a skill already knows how to produce. That is the pattern worth following: the skill defines the rule, the plugin shows the result.
