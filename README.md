@@ -9,9 +9,8 @@ Paseo is the client I drive Claude Code from. These plugins bend it toward my wo
 
 | Plugin | What it does | Status |
 | --- | --- | --- |
-| [kit-launcher](kit-launcher/) | Sends any `/kitname` prompt to the focused agent from the Command Center or a composer pill | Built, not yet verified against a live daemon |
-| [claude-usage](claude-usage/) | Shows the Claude Code rate-limit usage (session, weekly, per-model) as progress bars | Built, not yet verified against a live daemon |
-| [worktree-sync](worktree-sync/) | Registers git worktrees of known Paseo projects as workspaces, so worktrees made outside Paseo appear in the sidebar | Built, not yet verified against a live daemon |
+| [kit-launcher](plugins/kit-launcher/) | Sends any `/kitname` prompt to the focused agent from the Command Center or a composer pill | Built, not yet verified against a live daemon |
+| [worktree-sync](plugins/worktree-sync/) | Registers git worktrees of known Paseo projects as workspaces, so worktrees made outside Paseo appear in the sidebar | Built, not yet verified against a live daemon |
 
 Add a row when a plugin lands. Keep the description to one line.
 
@@ -20,14 +19,14 @@ Add a row when a plugin lands. Keep the description to one line.
 Install one plugin straight from this repo:
 
 ```sh
-paseo plugin install mimukit/paseo-plugins --path <plugin-dir>
+paseo plugin install mimukit/paseo-plugins --path plugins/<plugin-dir>
 paseo plugin ls
 ```
 
 Install from a local checkout instead, which is what I do while writing one:
 
 ```sh
-paseo plugin install ~/Github/mimukit/paseo-plugins/<plugin-dir>
+paseo plugin install ~/Github/mimukit/paseo-plugins/plugins/<plugin-dir>
 pnpm typecheck && paseo plugin reload <id>
 paseo plugin logs <id>
 ```
