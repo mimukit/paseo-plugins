@@ -12,6 +12,24 @@ Dev loop: edit, `pnpm typecheck`, `paseo plugin reload <id>`, `paseo plugin logs
 
 ---
 
+## 0. Turn retry (parked)
+
+**What it does.** Watches a failed agent turn, works out whether a provider overload or a subscription window limit caused it, and re-sends the same input after the window resets. A queued card lets me send it early or cancel it. It clones the bb `provider-retry` plugin as policy only.
+
+**Extension points.** `server.on("agent.turn_ended")` for the failure, a durable queue row for the pending send, and a card in the thread.
+
+**Where the code runs.** Server side classifies the error and schedules the send. The client renders the card.
+
+**Detail worth getting right.** Add a buffer and jitter after the reset time, or many threads on one account wake together and hit a second 429.
+
+**Effort.** Medium.
+
+**Value.** Removes the wait after a usage limit, which is the longest stall in an overnight run.
+
+**Status.** Parked. The plan is [docs/plans/plan-turn-retry-2026-09-08.md](docs/plans/plan-turn-retry-2026-09-08.md). Paseo 0.7.2 has no server-side turn event, so this needs 0.8. Revisit when Paseo 0.8 ships out of beta.
+
+---
+
 ## 1. Permission triage panel
 
 **What it does.** Lists every pending permission request across agents, with an allow button and a deny button per row. A blocked agent today waits silently in a background tab. This panel makes the wait visible, and it works well on the phone.
