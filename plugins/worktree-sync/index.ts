@@ -1,10 +1,10 @@
 import type { PluginContext } from "@getpaseo/plugin";
 import { getSyncStatus, syncNow } from "./contracts";
 import { SyncPanel } from "./main.client";
-import { SyncService } from "./service";
+import { createSyncService } from "./service";
 
 export default function contribute(plugin: PluginContext) {
-  const service = new SyncService();
+  const service = createSyncService();
 
   plugin.handle(getSyncStatus, async () => service.status());
   plugin.handle(syncNow, async () => service.syncNow());
