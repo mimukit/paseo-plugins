@@ -18,3 +18,8 @@ This repo holds personal Paseo plugins. One directory per plugin, named after th
 - Add a row to the table in `README.md` when a plugin lands. Keep edits inside the `wikikit:front-door` markers consistent with `docs/wiki/`.
 - Reader docs live in `docs/wiki/`, mapped by `docs/wiki/.wikimap.yaml`. Update the map when you add or remove a page.
 - Never hard-wrap Markdown.
+
+## Docs artifact naming
+
+- An artifact under `docs/<type>/` (a plan, a QA report, a review) is named `NNNN-<type>-<slug>-YYYY-MM-DD.md`. `NNNN` is a four-digit serial, per directory, assigned in creation order and never reused. `YYYY-MM-DD` is the creation date and stays fixed after edits.
+- This does not cover `docs/wiki/`. Reader-facing pages there keep their plain names.
