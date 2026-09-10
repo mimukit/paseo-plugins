@@ -1,3 +1,4 @@
 {
-  "id": "kit-launcher"
+  "id": "kit-launcher",
+  "requirements": { "paseo": ">=0.8.0" }
 }

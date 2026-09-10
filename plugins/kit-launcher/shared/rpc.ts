@@ -1,4 +1,4 @@
-import { defineRpc } from "@getpaseo/plugin/server";
+import { defineRpc } from "@getpaseo/plugin";
 import { z } from "zod";
 
 // The workspace `diffStat` counts the branch diff against the base ref, so it
