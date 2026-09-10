@@ -2,6 +2,8 @@
 
 Drafted: 2026-09-08. Not grilled yet. Working name `turn-retry`; see "Name candidates" at the end.
 
+Updated 2026-09-10: Paseo 0.8.0 is the stable npm `latest` tag, not a beta. Every 0.8 capability this plan depends on is verified against the installed `@getpaseo/plugin@0.8.0` types. The plan is unblocked. See "Capability check" below.
+
 ## Context
 
 When Claude Code or Codex hits a provider overload or a subscription window limit, the Paseo agent turn fails and the thread stops. The user has to notice, wait for the window to reset, and press send again. The bb editor ships a `provider-retry` plugin that watches failed turns and re-sends the same input after the reset, with a queued card the user can fire early or cancel. This plan clones that behaviour for Paseo.
@@ -22,21 +24,33 @@ Everything hard (error classification, rate limit windows, the attempt counter, 
 
 ## Can Paseo host a clone?
 
-Yes on Paseo 0.8. No on Paseo 0.7.2, which is what this box runs today.
+Yes. Paseo 0.8.0 ships every capability this plugin needs.
 
-| bb capability | Paseo 0.7.2 (installed) | Paseo 0.8.0-beta.1 (npm tag `beta`, main branch) |
+## Capability check
+
+Verified on 2026-09-10 against `@getpaseo/plugin@0.8.0`, `@getpaseo/client@0.8.0` and `@getpaseo/protocol@0.8.0`, as installed under `plugins/worktree-sync/node_modules`.
+
+| bb capability | Paseo 0.8.0 | Where |
 | --- | --- | --- |
-| Server-side event on a failed turn | None. Server code gets `paseo` only inside an RPC handler. Only the client can subscribe to `agent_stream`, and the client is not always open. | `server.on("agent.turn_ended", (event, { paseo }))` with `outcome: { kind: "failed", error: { message, code? } }` and the full `timeline`. Runs on the daemon with no app connected. |
-| Error category | Free text only. The Claude provider builds `turn_failed.error` from the message and `code` from a `code N` match. No provider classifies rate limits or overloads. | Same. The plugin must classify from text. |
-| Rate limit windows with reset time | `provider.usage.list` exists on `DaemonClient` but not on `PaseoApi`. | `paseo.providers.listUsage()` returns per-provider `windows[]` with `usedPct`, `resetsAt`, `tone`. Fed by the quota fetcher, not by the failed turn. |
-| Re-send the original input | `agents.ref(id).send(text)` exists. | Same. Attachments and images are not replayed; the reference states this. |
-| Attempt counter per turn | None. | None. The plugin keeps its own. |
-| Durable scheduled send | `schedule` API is cadence-based (`every`, `cron`) and creates a new agent or targets an existing one. No one-shot "send at T". | Same. The plugin keeps its own timer and a JSON file. |
-| Queued card on the thread | None. | `paseo.agents.ref(id).timeline.append({ type: "plugin", id, kind, version, data })` plus `client.addTimelineRenderer`. Replaces the row on the same `id`. |
-| Settings | None. | `defineSettings` in `shared/`, `server.registerSettings`, `useSettings` in the client, `client.addSettingsScreen`. |
-| CLI subcommands | None for plugins. | None for plugins. Replace with a Command Center item and the card buttons. |
+| Server-side event on a failed turn | Present. `server.on("agent.turn_ended", (event, { paseo }))` gives `{ agent, turnId, outcome, timeline }`. `PluginTurnOutcome` carries `{ kind: "failed", error: { message, code? } }`. `event.agent` carries `provider`. | `dist/server/lifecycle.d.ts:49` |
+| Error category | Absent. No provider classifies a rate limit or an overload. The plugin must classify from text. | — |
+| Rate limit windows with reset time | Present. `paseo.providers.listUsage()` returns `providers[]`, each with `providerId`, `status` and `windows[]`. A window carries `id`, `label`, `usedPct`, `remainingPct`, `resetsAt`, `tone`. Every field after `label` is optional and nullable. | `PaseoProviderActions`, `ProviderUsageListResponseMessage` |
+| Re-send the original input | Present. `paseo.agents.ref(id).send(text, options?)`. Attachments and images are not replayed. | `PaseoAgentHandle.send` |
+| Guard state before send | Present. `PaseoAgentHandle` exposes `refresh()`, `status`, `archivedAt`, `activeTurn` and `current()`. | `PaseoAgentHandle` |
+| Attempt counter per turn | Absent. The plugin keeps its own. | — |
+| Durable scheduled send | Absent. The `schedule` API stays cadence-based. The plugin keeps its own timer and a JSON file. | — |
+| Queued card on the thread | Present. `paseo.agents.ref(id).timeline.append(item)` on the server, `client.addTimelineRenderer` on the client. | `PaseoAgentTimelineHandle.append`, `client/contracts.d.ts:72` |
+| Settings | Present. `defineSettings`, `server.registerSettings`, `client.addSettingsScreen`. | `settings.d.ts:11`, `server/contracts.d.ts:11`, `client/contracts.d.ts:61` |
+| Command Center item | Present. `client.addCommandCenterItem`. | `client/contracts.d.ts` |
+| CLI subcommands | Absent for plugins. Replace with a Command Center item and the card buttons. | — |
 
-The 0.8 layout also changes: `index.server.ts`, `index.client.tsx`, and `client/`, `server/`, `shared/` directories. A plugin root with `index.ts` fails to load on 0.8. This repo's `AGENTS.md` and `docs/wiki/` describe the 0.7 layout. This plugin is the first one to need the new layout, so the wiki needs a 0.8 note when it lands.
+The three absent rows match what this plan already assumed, so no design change follows from the check.
+
+The 0.8 layout uses `index.server.ts`, `index.client.tsx`, and `client/`, `server/`, `shared/` directories. This repo already follows it. `AGENTS.md` and `docs/wiki/` were updated for 0.8 in commit `774640a`, so this plugin needs no wiki migration note.
+
+## Remaining blocker
+
+The `paseo` CLI is not installed on this box. `command -v paseo` finds nothing and `mise ls` lists no entry. `AGENTS.md` requires `paseo plugin init` for the scaffold, and Phase 0 needs `paseo plugin logs`. Install the CLI first.
 
 The closest existing code is `plugin-examples/lifecycle-actions` in the Paseo repo. It watches `agent.turn_ended`, greps the latest output text for "out of credits", and sends "Try again." with no limit, no delay, and no persistence. This plan is that example with policy, persistence, and a card.
 
@@ -44,10 +58,10 @@ The closest existing code is `plugin-examples/lifecycle-actions` in the Paseo re
 
 | Decision | Resolution |
 | --- | --- |
-| Target version | Paseo `>=0.8.0` in `paseo-plugin.json`. Install the `beta` CLI on this box with `mise` to scaffold and typecheck. Desktop verification waits for a 0.8 app build. |
+| Target version | Paseo `>=0.8.0` in `paseo-plugin.json`, the same line the other two plugins carry. Install the stable CLI with `mise use -g npm:@getpaseo/cli@0.8.0` to scaffold and typecheck. |
 | Trigger | `server.on("agent.turn_ended")`. Act on `outcome.kind === "failed"`. Also inspect a `completed` turn whose latest assistant text matches a usage-limit phrase, because Claude Code can end a turn with "You've hit your limit" as ordinary text. A spike confirms which shape each provider produces. |
 | Classification | A pure `classify(message, latestText)` in `server/policy.ts` with two regex tables. Overload: `overloaded`, `529`, `503`, `500`, `ECONNRESET`, `fetch failed`, `socket hang up`. Rate limit: `429`, `rate limit`, `rate_limit`, `hit your limit`, `usage limit`, `resets`. Everything else declines with a named reason. Credit or billing words (`credit`, `billing`, `insufficient`) decline. |
-| Reset time | First parse a time from the text when present. Otherwise call `paseo.providers.listUsage()` and take the latest `resetsAt` among the failed agent's provider windows with `usedPct >= 100` or `tone === "danger"`. No window means decline with `no-rate-limit-state`. |
+| Reset time | First parse a time from the text when present. Otherwise call `paseo.providers.listUsage()` and take the latest `resetsAt` among the failed agent's provider windows with `usedPct >= 100` or `tone === "danger"`. Match the window's provider by `event.agent.provider` against `providers[].providerId`. Treat every window field as optional and nullable. No window means decline with `no-rate-limit-state`. |
 | Delay policy | Port `retry-policy.ts` unchanged: 15 s buffer, 30 s jitter, overload base 5 s doubling with jitter, 5 total attempts, maximum wait 6 h default. Inject `now` and `random` for tests. |
 | Retry input | The text of the latest `user_message` in `event.timeline`, verbatim. Store its `messageId` and a content hash. |
 | Attempt counter | Keyed by `agentId` plus the user message hash. Stored with the pending retry. A retry that fails again re-enters with `attempt + 1`. |
@@ -65,7 +79,7 @@ The closest existing code is `plugin-examples/lifecycle-actions` in the Paseo re
 
 Confirm the failure shapes before writing policy.
 
-- Install the beta CLI: `mise use -g npm:@getpaseo/cli@0.8.0-beta.1` and confirm `paseo --version`.
+- Install the CLI: `mise use -g npm:@getpaseo/cli@0.8.0`, run `devaloy update`, then confirm `paseo --version`.
 - Install `plugin-examples/lifecycle-logger` from the Paseo checkout and read `paseo plugin logs lifecycle-logger` while a Claude agent hits a limit. Record the exact `outcome.error.message`, the `code`, and the latest assistant text.
 - Call `paseo.providers.listUsage()` from a throwaway handler and record the window ids, `usedPct`, and `resetsAt` for Claude.
 - Delete the spike. Paste the samples into `server/policy.test.ts` fixtures.
@@ -94,7 +108,7 @@ Confirm the failure shapes before writing policy.
 
 - README per `docs/wiki/plugin-readme-template.md`, with a "Requires Paseo 0.8" line.
 - Row in the repo `README.md` table.
-- A short 0.8 layout note in `docs/wiki/architecture.md` and `docs/wiki/reference.md`, and update `AGENTS.md` so the `index.ts` rule reads "0.7 plugins".
+- No wiki migration note. Commit `774640a` already moved `AGENTS.md` and `docs/wiki/` to the 0.8 plugin system.
 
 ## Open questions
 
@@ -106,7 +120,7 @@ Confirm the failure shapes before writing policy.
 ## Non-goals
 
 - No change to Paseo core. Everything runs as a plugin.
-- No 0.7 support. The 0.7 daemon has no server-side turn event.
+- No 0.7 support. The 0.7 daemon has no server-side turn event, and this repo now targets 0.8 everywhere.
 - No cron schedule. The schedule API creates agents on a cadence; it is the wrong tool for one send at one time.
 - No credit or billing retries. Waiting does not fix those.
 
