@@ -6,7 +6,7 @@ pages:
     documents: [README.md, "plugins/*/paseo-plugin.json"]
   - path: getting-started.md
     mode: tutorial
-    documents: ["plugins/*/paseo-plugin.json", "plugins/*/package.json", "plugins/*/index.ts", "plugins/*/main.client.tsx"]
+    documents: ["plugins/*/paseo-plugin.json", "plugins/*/package.json", "plugins/*/index.client.tsx", "plugins/*/index.server.ts", "plugins/*/client/*.tsx"]
   - path: how-to/add-a-plugin.md
     mode: how-to
     documents: [AGENTS.md, README.md, IDEAS.md, "plugins/*/package.json"]
@@ -15,10 +15,10 @@ pages:
     documents: ["plugins/*/paseo-plugin.json"]
   - path: architecture.md
     mode: explanation
-    documents: ["plugins/*/index.ts", "plugins/*/*.client.tsx", "plugins/*/paseo-plugin.d.ts"]
+    documents: ["plugins/*/index.client.tsx", "plugins/*/index.server.ts", "plugins/*/shared/*.ts"]
   - path: reference.md
     mode: reference
-    documents: ["plugins/*/paseo-plugin.d.ts", "plugins/*/paseo-plugin.json", "plugins/*/tsconfig.json"]
+    documents: ["plugins/*/paseo-plugin.json", "plugins/*/package.json", "plugins/*/tsconfig.json"]
   - path: plugin-readme-template.md
     mode: reference
     documents: ["plugins/*/README.md"]

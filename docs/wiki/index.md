@@ -10,7 +10,7 @@ No plugin has landed yet. Everything here describes how to build and install one
 - [Add a plugin](how-to/add-a-plugin.md) — the checklist from empty directory to a row in the README table.
 - [Install a plugin](how-to/install-a-plugin.md) — install from Git or a local path, then reload, disable or remove it.
 - [Architecture](architecture.md) — how a plugin is put together, and which half runs where.
-- [Reference](reference.md) — the `PluginContext` extension points, the manifest, and the `paseo plugin` commands.
+- [Reference](reference.md) — the client and server extension points, the manifest, the import subpaths, and the `paseo plugin` commands.
 - [Plugin README template](plugin-readme-template.md) — the shape every plugin README follows.
 
 Repo conventions for agent sessions live in [AGENTS.md](../../AGENTS.md). The plugin backlog lives in [IDEAS.md](../../IDEAS.md).

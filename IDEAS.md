@@ -6,7 +6,7 @@ Build order: the permission triage panel first, then the docs and issue attachme
 
 ## Reference
 
-Every plugin is a directory with `paseo-plugin.json` (only `id` is required) and an `index.ts` that default-exports `contribute(plugin: PluginContext)` and returns a cleanup function. UI lives in `*.client.tsx`, which Paseo keeps out of the daemon bundle. React, React Native, TanStack Query and Zod come from the runtime, so no bundler is needed for them.
+Every plugin is a directory with `paseo-plugin.json`, which needs `id` and `requirements.paseo`. Code splits by runtime: `index.client.tsx` default-exports `contribute(client: PluginClientContext)`, `index.server.ts` default-exports `contribute(server: PluginServerContext)`, and each returns a cleanup function. UI lives under `client/`, daemon code under `server/`, and shared contracts under `shared/`. React, React Native, TanStack Query and Zod come from the runtime, so no bundler is needed for them.
 
 Dev loop: edit, `pnpm typecheck`, `paseo plugin reload <id>`, `paseo plugin logs <id>`.
 
@@ -26,7 +26,7 @@ Dev loop: edit, `pnpm typecheck`, `paseo plugin reload <id>`, `paseo plugin logs
 
 **Value.** Removes the wait after a usage limit, which is the longest stall in an overnight run.
 
-**Status.** Parked. The plan is [docs/plans/plan-turn-retry-2026-09-08.md](docs/plans/plan-turn-retry-2026-09-08.md). Paseo 0.7.2 has no server-side turn event, so this needs 0.8. Revisit when Paseo 0.8 ships out of beta.
+**Status.** Unparked as of 2026-09-10. The plan is [docs/plans/plan-turn-retry-2026-09-08.md](docs/plans/plan-turn-retry-2026-09-08.md). It waited on Paseo 0.8, which has now shipped as `latest`. `@getpaseo/plugin/server` exports lifecycle types including `PluginTurnOutcome`, so check whether the turn event this needs is among them before reopening the plan.
 
 **2026-09-09 research.** Claude Code already ships a built-in version of this, `autoContinueAtUsageLimit` (on by default, v2.1.234+): on a usage-limit stop it waits in the open session and sends a fixed continue prompt at reset, re-arming at most twice in a row and never past a 24-hour horizon. It only works in an interactive session, though. The afkkit conductor runs through Paseo's SDK adapter, which drops the `rate_limit_event` message entirely, so Paseo just sees an idle agent and the feature never fires. Confirmed against a real afkkit run (issue #127, entrypoint `sdk-cli`) that hit this gap. Options short of a Paseo 0.8 server event: (a) run afkkit in a plain interactive `claude` session inside tmux, so the built-in wait applies, no code needed — trying this for a few days starting 2026-09-09; (b) a standalone resume driver using `claude -p --resume` that reads `resets_at` from the same usage cache `config/bin/usage` parses, with no retry cap; (c) have afkkit itself write a `.afkkit/state.md` checkpoint (queue, current issue, current step, phases committed) so any resume path — this plugin, a driver script, or a bare rerun — restarts at the right step instead of redoing the spec gate. (c) is worth doing regardless of which resume mechanism wins.
 

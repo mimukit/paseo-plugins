@@ -10,7 +10,7 @@ You need the Paseo CLI on your PATH and a running daemon:
 paseo --version
 ```
 
-This guide was written against Paseo 0.7.0.
+This guide was written against Paseo 0.8.0.
 
 ## 1. Scaffold the plugin
 
@@ -21,17 +21,21 @@ cd ~/Github/mimukit/paseo-plugins
 paseo plugin init plugins/hello-kit --id hello-kit
 ```
 
-You get six files:
+You get one entry per runtime and a directory for each:
 
 ```
 plugins/hello-kit/
-  paseo-plugin.json    # {"id": "hello-kit"}
+  paseo-plugin.json    # id and requirements.paseo
   package.json         # devDependencies and a typecheck script
   tsconfig.json
-  paseo-plugin.d.ts    # type declarations for the Paseo runtime
-  index.ts             # default-exports contribute(plugin)
-  main.client.tsx      # a surface that renders "Hello from my plugin"
+  index.client.tsx     # default-exports contribute(client)
+  index.server.ts      # default-exports contribute(server)
+  client/greeting.tsx  # a surface that renders a greeting
+  server/greeting.ts   # the handler that produces it
+  shared/greeting.ts   # the RPC contract both sides import
 ```
+
+The directories are not a style choice. Paseo 0.8 rejects a code module left at the plugin root, and it fails the load when client code reaches a `node:` builtin.
 
 ## 2. Typecheck it
 
@@ -61,11 +65,11 @@ paseo plugin ls
 
 ## 4. See it in Paseo
 
-The scaffold registers a surface with `plugin.addSurface("main", MainSurface)`. Open Paseo and look for the plugin's surface. It renders the text `Hello from my plugin`.
+The scaffold registers a surface with `client.addSurface("greeting", GreetingSurface)` and a sidebar entry pointing at it. Open Paseo and look for the plugin in the sidebar.
 
 ## 5. Change it and reload
 
-Edit `main.client.tsx` and change the text. Then run the loop:
+Edit `client/greeting.tsx` and change the text. Then run the loop:
 
 ```sh
 pnpm typecheck
@@ -77,8 +81,8 @@ paseo plugin logs hello-kit
 
 ## What you built
 
-A plugin that contributes one surface. The `contribute` function in `index.ts` is the whole entry point, and the cleanup function it returns is what Paseo calls on the next reload.
+A plugin that contributes one surface and one RPC handler. Each `contribute` function is the entry point for its runtime, and the cleanup function it returns is what Paseo calls on the next reload.
 
 Next: read [Architecture](architecture.md) to see what else `contribute` can register, and [Add a plugin](how-to/add-a-plugin.md) for the steps that turn a scratch plugin into one this repo ships.
 
-_Verified against `main`@`c4b0a58` on 2026-09-01._
+_Verified against Paseo 0.8.0 on 2026-09-10._

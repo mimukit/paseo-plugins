@@ -9,13 +9,17 @@ cd ~/Github/mimukit/paseo-plugins
 paseo plugin init plugins/<name> --id <name>
 ```
 
-Do not hand-write the scaffold. `paseo plugin init` writes `paseo-plugin.d.ts`, which carries the runtime type declarations, and those change with the Paseo version.
+Do not hand-write the scaffold. `paseo plugin init` writes both runtime entries, the three code directories, and the `requirements.paseo` range the loader checks. All three change with the Paseo version.
 
 Every plugin lives under `plugins/`, never at the repo root. The directory name must equal the manifest `id`. `paseo plugin install --path <dir>` takes the directory, and `paseo plugin reload <id>` takes the id. Keeping them the same means one word for both.
 
 ## 2. Split client from server
 
-Put every React component in a `*.client.tsx` file and import it from `index.ts`. Paseo keeps `*.client.tsx` out of the daemon bundle. Server code stays in `index.ts` and plain `.ts` files.
+React components go in `client/`, daemon code in `server/`, and anything both import in `shared/`. Register from `index.client.tsx` and `index.server.ts`. A plugin may ship either entry or both.
+
+The loader enforces this. A `node:` import reached from the client bundle fails the load, so does a `client/` module imported from `server/`, and so does any code module left at the plugin root. Keep `shared/` free of both runtimes: contracts, schemas and plain data only.
+
+Each plugin typechecks as two projects so the compiler catches half of that earlier. `tsconfig.json` covers `index.client.*`, `client/` and `shared/` with the React types only; `tsconfig.server.json` covers `index.server.ts`, `server/` and `shared/` with the Node types. `pnpm typecheck` runs both. A `node:` import in client code then fails to resolve at typecheck instead of at load. A `client/` module imported from `server/` still passes tsc, so the loader remains the only gate for that one.
 
 Do not add a bundler. React, React Native, TanStack Query and Zod come from the Paseo runtime.
 
@@ -50,4 +54,4 @@ Copy [the template](../plugin-readme-template.md) into `<name>/README.md` and fi
 
 Commit the plugin directory, the README row, and the IDEAS.md change together. One plugin per commit keeps `git log` readable as a plugin list.
 
-_Verified against `main`@`c4b0a58` on 2026-09-01._
+_Verified against Paseo 0.8.0 on 2026-09-10._

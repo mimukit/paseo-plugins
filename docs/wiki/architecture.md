@@ -2,31 +2,48 @@
 
 How a Paseo plugin is put together, and why the pieces sit where they do.
 
-## The entry point
+## Two entry points
 
-`index.ts` default-exports one function:
+A plugin has one entry per runtime, and the filenames are fixed. `index.client.tsx` registers everything the reader sees:
 
-```ts
-import type { PluginContext } from "@getpaseo/plugin";
-import { MainSurface } from "./main.client";
+```tsx
+import type { PluginClientContext } from "@getpaseo/plugin/client";
+import { MainSurface } from "./client/main";
 
-export default function contribute(plugin: PluginContext) {
-  plugin.addSurface("main", MainSurface);
+export default function contribute(client: PluginClientContext) {
+  client.addSurface("main", MainSurface);
   return () => {};
 }
 ```
 
-`contribute` runs once per load. It registers everything the plugin adds and returns a cleanup function. Paseo calls that cleanup on reload and on removal, so anything with a lifetime goes there: timers, file watchers, subscriptions. A cleanup that forgets a timer leaves the old timer running after the next `paseo plugin reload`.
+`index.server.ts` registers everything that touches the machine:
+
+```ts
+import type { PluginServerContext } from "@getpaseo/plugin/server";
+import { listWorktrees } from "./shared/contracts";
+import { readWorktrees } from "./server/worktrees";
+
+export default function contribute(server: PluginServerContext) {
+  server.handle(listWorktrees, async (input) => ({
+    worktrees: await readWorktrees(input.workspacePath),
+  }));
+  return () => {};
+}
+```
+
+A plugin may ship either entry or both. Each `contribute` runs once per load, registers what the plugin adds, and returns a cleanup function. Paseo calls that cleanup on reload and on removal, so anything with a lifetime goes there: timers, file watchers, subscriptions. A cleanup that forgets a timer leaves the old timer running after the next `paseo plugin reload`.
 
 ## Two runtimes, one directory
 
 A plugin spans two places at once.
 
-**The daemon** runs `index.ts` and every plain `.ts` file it imports. It has the filesystem, the shell, and the network. This is where a panel's data comes from.
+**The daemon** runs `index.server.ts` and everything under `server/`. It has the filesystem, the shell, and the network. This is where a panel's data comes from.
 
-**The client** runs the React components. Paseo renders them on desktop, in the browser, on iOS and on Android from the same source.
+**The client** runs `index.client.tsx` and everything under `client/`. Paseo renders those components on desktop, in the browser, on iOS and on Android from the same source.
 
-The split is by filename. Paseo keeps `*.client.tsx` out of the daemon bundle, so every component lives in one of those files and `index.ts` imports it. The naming convention is the whole mechanism; there is no separate build step and no configuration key.
+**`shared/`** holds what both import: RPC contracts, Zod schemas, plain data. Nothing in it may reach a runtime API.
+
+The split is by directory, and the loader enforces it. A `node:` import reached from the client bundle is a load error, not a runtime stub, and so is a `client/` module imported from `server/`. A code module left at the plugin root is rejected outright.
 
 React, React Native, TanStack Query and Zod are supplied by the runtime. A plugin that bundles its own copy is fighting the loader.
 
@@ -34,10 +51,10 @@ React, React Native, TanStack Query and Zod are supplied by the runtime. A plugi
 
 A client component cannot run `git`. A daemon handler cannot render. Typed RPC joins them, and Zod holds both ends to the same shape.
 
-Define the contract once, in a file both sides import:
+Define the contract once, in `shared/`, where both sides import it. `defineRpc` comes from the package root for exactly this reason: a `@getpaseo/plugin/server` import in a shared file would drag server-only code into the client bundle and fail the load.
 
 ```ts
-import { defineRpc } from "@getpaseo/plugin/server";
+import { defineRpc } from "@getpaseo/plugin";
 import { z } from "zod";
 
 export const listWorktrees = defineRpc({
@@ -47,10 +64,10 @@ export const listWorktrees = defineRpc({
 });
 ```
 
-Register the handler in `contribute`:
+Register the handler in the server entry:
 
 ```ts
-plugin.handle(listWorktrees, async (input, { paseo }) => {
+server.handle(listWorktrees, async (input, { paseo }) => {
   return { worktrees: await readWorktrees(input.workspacePath) };
 });
 ```
@@ -59,11 +76,11 @@ Call it from a command or a client component with `rpc(listWorktrees, { workspac
 
 ## What a plugin can add
 
-`PluginContext` exposes ten registration methods, listed in the [reference](reference.md). They fall into three groups.
+`PluginClientContext` exposes twelve registration methods, listed in the [reference](reference.md). They fall into three groups.
 
 **Surfaces and panels** are the pieces a reader sees: `addSurface` for a full screen, `addWorkspacePanel` for a panel inside a workspace, `addSidebarItem` for an entry in the sidebar.
 
-**Commands** are the pieces a reader triggers: `addCommandCenterItem` for a searchable command, and `addComposerPill` (reached through `addClientSide`) for a tap target above the composer. A command declares its context as `global`, `workspace` or `agent`, and receives a matching context object. A workspace command gets `workspace` and `openPanel`; an agent command gets `agent` as well.
+**Commands** are the pieces a reader triggers: `addCommandCenterItem` for a searchable command, `addSlashCommand` for a composer command, and `addComposerPill` for a tap target above the composer. A command declares its context as `global`, `workspace` or `agent`, and receives a matching context object. A workspace command gets `workspace` and `openPanel`; an agent command gets `agent` as well.
 
 **Transforms** change what Paseo already renders: `addAttachmentSource` feeds the composer attachment picker, `addTheme` adds a theme, and the two timeline methods rewrite or render timeline items.
 
@@ -87,4 +104,4 @@ A panel renders on a phone and a desktop, in a light theme and a dark one. Use `
 
 Most of these plugins display state that a Claude Code skill already knows how to produce: gitkit defines when a worktree is safe to archive, statuskit defines how to rank the next move. The plugin shows the result and calls the rule. It does not restate the rule, because two copies of a rule drift.
 
-_Verified against `main`@`c4b0a58` on 2026-09-01._
+_Verified against Paseo 0.8.0 on 2026-09-10._
