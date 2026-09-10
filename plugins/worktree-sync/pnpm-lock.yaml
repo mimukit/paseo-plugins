@@ -9,11 +9,8 @@ importers:
   .:
     devDependencies:
       '@getpaseo/plugin':
-        specifier: 0.7.2
-        version: 0.7.2(@getpaseo/client@0.7.2)(@getpaseo/protocol@0.7.2)(react@19.1.0)(zod@4.5.4)
-      '@tanstack/react-query':
-        specifier: ^5.90.11
-        version: 5.102.8(react@19.1.0)
+        specifier: 0.8.0
+        version: 0.8.0(@getpaseo/client@0.8.0)(@getpaseo/protocol@0.8.0)(react-native@0.81.5(@babel/core@7.29.7(supports-color@8.1.1))(@types/react@19.2.18)(react@19.1.0)(supports-color@8.1.1))(react@19.1.0)(zod@4.5.4)
       '@types/node':
         specifier: ^26.4.1
         version: 26.4.1
@@ -34,6 +31,11 @@ importers:
         version: 4.5.4
 
 packages:
+
+  '@agentclientprotocol/sdk@1.4.0':
+    resolution: {integrity: sha512-/eufudw+aFY1LKLolT6yFE6UMmYRl7fMJ/DEONSIyR6wI3slHWITBsANRGqXEY8FRzqUxwh7QEaGiZHcJPVThg==}
+    peerDependencies:
+      zod: ^3.25.0 || ^4.0.0
 
   '@babel/code-frame@7.29.7':
     resolution: {integrity: sha512-Aup7aUOfpbAUg2ROOJN6Iw5f9DMBlzu0mIkm/malLQFN/YQgO48wCj0Kxa3sEHJvPVFg7siR+qRInwXd2qhQKw==}
@@ -189,22 +191,26 @@ packages:
     resolution: {integrity: sha512-Vj1jF3cPfxg7OAfoI7QnVKLoILlm2JF9pnVHrX8qx7AHMiYWT+NDAA7jChlNgRS4WTLc/fD1lXLmPixluj+3Gg==}
     engines: {node: '>=6.9.0'}
 
-  '@getpaseo/client@0.7.2':
-    resolution: {integrity: sha512-BD3uNBdp4wz79uDIJPYqAnaLXbMlZ1V/Nb9RFv0cEUcrFzk0kKAQ1NOaquD3Lz4MUJFTR8Eh/VxJB+OlbHSsiQ==}
+  '@getpaseo/client@0.8.0':
+    resolution: {integrity: sha512-sX0PPR47a9MoK4cUpZXo4vrZLSfP39/l9jlxYslQTGTiXE/9g6EDr6XlRQZVlTkgZZ47xGRVJZ/wxhE37nLWkw==}
 
-  '@getpaseo/plugin@0.7.2':
-    resolution: {integrity: sha512-uOhaMdxqgIkETjw+yAGRyZ84yJrpb1ECwBRj9f6cSNHeUwNj/1ohwa/oCfmdnoiX57s3oYYkY+7uE8bUy2Q/Fg==}
+  '@getpaseo/plugin@0.8.0':
+    resolution: {integrity: sha512-VWdqMuYhv6oVrbNr+phDkSkMd4qfjb55UkFB0S4u4sHgo66UtJwvn8U9bwp1zU5wktW2LdXEa4OpcEGFDSkdVw==}
     peerDependencies:
-      '@getpaseo/client': 0.7.2
-      '@getpaseo/protocol': 0.7.2
-      react: 19.1.0
+      '@getpaseo/client': 0.8.0
+      '@getpaseo/protocol': 0.8.0
+      react: ~19.1.0
+      react-native: '>=0.81.5'
       zod: ^4.4.3
+    peerDependenciesMeta:
+      react-native:
+        optional: true
 
-  '@getpaseo/protocol@0.7.2':
-    resolution: {integrity: sha512-bLegKuZIqO34Az8eKi0y3W0CcwwICipd7s4iFOUdOAiMwUYybzyXEpVaxuMcSzstNAtGqP+FMRteljFXAJ8T8w==}
+  '@getpaseo/protocol@0.8.0':
+    resolution: {integrity: sha512-SytigneLVG61useJ9yU400WFVWlqluwwUeWF/giRs0+ZOmgMSBZvYduqPAJdTRMAvJlrj62T/uVBH8gzMuHYLw==}
 
-  '@getpaseo/relay@0.7.2':
-    resolution: {integrity: sha512-IKdHhpWfofVa/v248r/wiU9Bu2AWhCKOijx4BbNFkGwJr6Eazby3n99tuN9cWYnCLj6/Hfnm4yNL29Bf9jXnbg==}
+  '@getpaseo/relay@0.8.0':
+    resolution: {integrity: sha512-YBCMAI3WOx7HgEToryyB94Mnugb7o2opuxN6ZycVK+K2wk2T25aV0sG3enzlKVM1oyiFVoJxJrAZyGDWfWpxpQ==}
 
   '@isaacs/ttlcache@1.4.1':
     resolution: {integrity: sha512-RQgQ4uQ+pLbqXfOmieB91ejmLwvSgv9nLx6sT6sD83s7umBypgg+OIBOBbEUiJXrfpnp9j0mRhYYdzp9uqq3lA==}
@@ -321,14 +327,6 @@ packages:
 
   '@sinonjs/fake-timers@10.3.0':
     resolution: {integrity: sha512-V4BG07kuYSUkTCSBHG8G8TNhM+F19jXFWnQtzj+we8DrkpSBCee9Z3Ms8yiGer/dlmhe35/Xdgyo3/0rQKg7YA==}
-
-  '@tanstack/query-core@5.102.8':
-    resolution: {integrity: sha512-ZNjkJ33CqvPNec/6lZBnHqLc3EVGPZ9ySLhYahU9TcuRFdmwXewuj0c4hwSWcGHqEUwcSrKeZ+oGcvPBqXcQcg==}
-
-  '@tanstack/react-query@5.102.8':
-    resolution: {integrity: sha512-TYBea4OuXWD7MhaSHq069TWbFe7rcwWN6kzT7JF0OKi1K6c1gTv2IzD6A6ExJsCMozdkqBWeuIUZmu4KQg0O5A==}
-    peerDependencies:
-      react: ^18 || ^19
 
   '@types/babel__core@7.20.5':
     resolution: {integrity: sha512-qoQprZvz5wQFJwMDqeseRXWv3rqMvhgpbXFfVyWhbx9X47POIA6i/+dXefEmZKoAgOaTdaIgNSMqMIU61yRyzA==}
@@ -1257,6 +1255,10 @@ packages:
 
 snapshots:
 
+  '@agentclientprotocol/sdk@1.4.0(zod@4.5.4)':
+    dependencies:
+      zod: 4.5.4
+
   '@babel/code-frame@7.29.7':
     dependencies:
       '@babel/helper-validator-identifier': 7.29.7
@@ -1436,28 +1438,32 @@ snapshots:
       '@babel/helper-string-parser': 7.29.7
       '@babel/helper-validator-identifier': 7.29.7
 
-  '@getpaseo/client@0.7.2':
+  '@getpaseo/client@0.8.0':
     dependencies:
-      '@getpaseo/protocol': 0.7.2
-      '@getpaseo/relay': 0.7.2
+      '@getpaseo/protocol': 0.8.0
+      '@getpaseo/relay': 0.8.0
       zod: 4.5.4
     transitivePeerDependencies:
       - bufferutil
       - utf-8-validate
 
-  '@getpaseo/plugin@0.7.2(@getpaseo/client@0.7.2)(@getpaseo/protocol@0.7.2)(react@19.1.0)(zod@4.5.4)':
+  '@getpaseo/plugin@0.8.0(@getpaseo/client@0.8.0)(@getpaseo/protocol@0.8.0)(react-native@0.81.5(@babel/core@7.29.7(supports-color@8.1.1))(@types/react@19.2.18)(react@19.1.0)(supports-color@8.1.1))(react@19.1.0)(zod@4.5.4)':
     dependencies:
-      '@getpaseo/client': 0.7.2
-      '@getpaseo/protocol': 0.7.2
+      '@agentclientprotocol/sdk': 1.4.0(zod@4.5.4)
+      '@getpaseo/client': 0.8.0
+      '@getpaseo/protocol': 0.8.0
       react: 19.1.0
       use-sync-external-store: 1.6.0(react@19.1.0)
       zod: 4.5.4
+    optionalDependencies:
+      react-native: 0.81.5(@babel/core@7.29.7(supports-color@8.1.1))(@types/react@19.2.18)(react@19.1.0)(supports-color@8.1.1)
 
-  '@getpaseo/protocol@0.7.2':
+  '@getpaseo/protocol@0.8.0':
     dependencies:
+      semver: 7.8.5
       zod: 4.5.4
 
-  '@getpaseo/relay@0.7.2':
+  '@getpaseo/relay@0.8.0':
     dependencies:
       base64-js: 1.5.1
       tweetnacl: 1.0.3
@@ -1625,13 +1631,6 @@ snapshots:
   '@sinonjs/fake-timers@10.3.0':
     dependencies:
       '@sinonjs/commons': 3.0.1
-
-  '@tanstack/query-core@5.102.8': {}
-
-  '@tanstack/react-query@5.102.8(react@19.1.0)':
-    dependencies:
-      '@tanstack/query-core': 5.102.8
-      react: 19.1.0
 
   '@types/babel__core@7.20.5':
     dependencies:
@@ -2235,7 +2234,7 @@ snapshots:
       '@babel/types': 7.29.8
       flow-enums-runtime: 0.0.6
       invariant: 2.2.4
-      metro-symbolicate: 0.83.8(supports-color@8.1.1)
+      metro-symbolicate: 0.83.8
       nullthrows: 1.1.1
       ob1: 0.83.8
       source-map: 0.5.7
@@ -2243,7 +2242,7 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
-  metro-symbolicate@0.83.8(supports-color@8.1.1):
+  metro-symbolicate@0.83.8:
     dependencies:
       flow-enums-runtime: 0.0.6
       invariant: 2.2.4
@@ -2251,8 +2250,6 @@ snapshots:
       nullthrows: 1.1.1
       source-map: 0.5.7
       vlq: 1.0.1
-    transitivePeerDependencies:
-      - supports-color
 
   metro-transform-plugins@0.83.8(supports-color@8.1.1):
     dependencies:
@@ -2315,7 +2312,7 @@ snapshots:
       metro-resolver: 0.83.8
       metro-runtime: 0.83.8
       metro-source-map: 0.83.8(supports-color@8.1.1)
-      metro-symbolicate: 0.83.8(supports-color@8.1.1)
+      metro-symbolicate: 0.83.8
       metro-transform-plugins: 0.83.8(supports-color@8.1.1)
       metro-transform-worker: 0.83.8(supports-color@8.1.1)
       mime-types: 3.0.2

@@ -11,17 +11,17 @@ Registers every git worktree of every Paseo project as a workspace, so worktrees
 ## Install
 
 ```sh
-paseo plugin install mimukit/paseo-plugins --path worktree-sync
+paseo plugin install mimukit/paseo-plugins --path plugins/worktree-sync
 ```
 
 ## Requirements
 
-- Paseo daemon running
+- Paseo 0.8.0 or later, daemon running
 - `git` and the `paseo` CLI on PATH
 
 ## Configuration
 
-None. The debounce (2 s) and the reconcile interval (5 min) are constants in `service.ts`.
+None. The debounce (2 s) and the reconcile interval (5 min) are constants in `server/service.ts`.
 
 ## How it works
 

@@ -1,8 +1,10 @@
-import type { PluginHostProps, PluginTheme } from "@getpaseo/plugin";
-import { Icon, useRpc } from "@getpaseo/plugin";
+import type { PluginTheme } from "@getpaseo/plugin";
+import type { PluginSurfaceProps } from "@getpaseo/plugin/client";
+import { useRpc } from "@getpaseo/plugin/client";
+import { Icon } from "@getpaseo/plugin/client/react-native";
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import { Pressable, ScrollView, Text, View } from "react-native";
-import { getSyncStatus, syncNow, type SyncStatus } from "./contracts";
+import { getSyncStatus, syncNow, type SyncStatus } from "../shared/contracts";
 
 const POLL_INTERVAL_MS = 30_000;
 
@@ -72,7 +74,7 @@ function Section({
   );
 }
 
-export function SyncPanel({ theme, layout }: PluginHostProps) {
+export function SyncPanel({ theme, layout }: PluginSurfaceProps) {
   const fetchStatus = useRpc(getSyncStatus);
   const runSync = useRpc(syncNow);
   const [status, setStatus] = useState<SyncStatus>(EMPTY);

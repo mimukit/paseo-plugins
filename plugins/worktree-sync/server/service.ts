@@ -1,10 +1,9 @@
-// Type-only, so it is erased before the client bundle is built. Every runtime
-// node import in this file is dynamic, for the reason paseo.ts explains.
-import type { FSWatcher } from "node:fs";
+import { existsSync, watch, type FSWatcher } from "node:fs";
+import { join } from "node:path";
 
-import { gitCommonDir, isNodeRuntime, listProjects } from "./paseo";
+import { gitCommonDir, listProjects } from "./paseo";
 import { reconcile, type ReconcileResult } from "./reconcile";
-import type { SyncStatus } from "./contracts";
+import type { SyncStatus } from "../shared/contracts";
 
 /** A burst of git writes lands within a second or two. Coalesce it. */
 const DEBOUNCE_MS = 2_000;
@@ -38,10 +37,6 @@ export type SyncService = {
 /**
  * Owns every timer and watcher the plugin holds. One instance per load, and
  * `stop()` must release all of it, or a reload leaves the old timers running.
- *
- * A closure, not a class. esbuild emits an exported class as `var X = class {}`,
- * and Hermes rejects that class expression when the app evaluates the client
- * bundle, which fails the whole plugin with a parse error.
  */
 export function createSyncService(): SyncService {
   const watchers = new Map<string, FSWatcher>();
@@ -113,9 +108,7 @@ export function createSyncService(): SyncService {
    * `worktrees/` itself, where each add and remove actually lands.
    */
   async function refreshWatchers(): Promise<void> {
-    if (stopped || !isNodeRuntime()) return;
-    const { existsSync, watch } = await import("node:fs");
-    const { join } = await import("node:path");
+    if (stopped) return;
     let roots: string[];
     try {
       roots = (await listProjects()).map((project) => project.rootPath);
@@ -177,12 +170,7 @@ export function createSyncService(): SyncService {
   }
 
   return {
-    /**
-     * No-op outside the daemon. `contribute` also runs in the client bundle,
-     * where there is no node runtime to spawn git or read the registry.
-     */
     start(): void {
-      if (!isNodeRuntime()) return;
       intervalTimer = setInterval(() => {
         void pass("interval");
       }, INTERVAL_MS);

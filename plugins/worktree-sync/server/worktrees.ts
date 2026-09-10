@@ -50,12 +50,12 @@ export async function listWorktrees(repoRoot: string): Promise<Worktree[]> {
   }
   flush();
 
-  const mainCheckout = await resolvePath(repoRoot);
-  const ownedRoot = await paseoOwnedWorktreeRoot();
+  const mainCheckout = resolvePath(repoRoot);
+  const ownedRoot = paseoOwnedWorktreeRoot();
 
   const found: Worktree[] = [];
   for (const entry of raw) {
-    const absolute = await resolvePath(entry.path);
+    const absolute = resolvePath(entry.path);
     if (absolute === mainCheckout) continue;
     if (isUnder(absolute, ownedRoot)) continue;
     found.push({ path: absolute, branch: entry.branch });

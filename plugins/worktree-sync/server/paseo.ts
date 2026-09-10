@@ -1,19 +1,7 @@
-// `contribute` is bundled for the client as well as the daemon, and the client
-// bundle stubs the node builtins. Anything imported at module scope is
-// evaluated on load there, which is what `(0, import_node_util.promisify) is
-// not a function` was: a stub `node:util` with no `promisify` on it. So this
-// module keeps every node import dynamic and inside a function. Type-only
-// imports are safe, because they are erased before the bundler sees them.
-
-/** True only in the daemon. The client bundle has no node runtime. */
-export function isNodeRuntime(): boolean {
-  return (
-    typeof process !== "undefined" &&
-    typeof process.versions === "object" &&
-    process.versions !== null &&
-    typeof process.versions.node === "string"
-  );
-}
+import { execFile } from "node:child_process";
+import { readFile, stat } from "node:fs/promises";
+import { homedir } from "node:os";
+import { join, resolve } from "node:path";
 
 // A hung CLI must not wedge the single-flight pass forever, so every spawn
 // carries a hard timeout. The buffer is sized for large project and worktree
@@ -21,8 +9,7 @@ export function isNodeRuntime(): boolean {
 const RUN_TIMEOUT_MS = 30_000;
 const RUN_MAX_BUFFER = 16 * 1024 * 1024;
 
-async function run(file: string, args: string[]): Promise<{ stdout: string }> {
-  const { execFile } = await import("node:child_process");
+function run(file: string, args: string[]): Promise<{ stdout: string }> {
   return new Promise((resolvePromise, reject) => {
     execFile(
       file,
@@ -36,21 +23,16 @@ async function run(file: string, args: string[]): Promise<{ stdout: string }> {
   });
 }
 
-async function paseoHome(): Promise<string> {
-  const { homedir } = await import("node:os");
-  const { join } = await import("node:path");
+function paseoHome(): string {
   return join(homedir(), ".paseo");
 }
 
 /** Worktrees Paseo creates itself. The plugin never registers these. */
-export async function paseoOwnedWorktreeRoot(): Promise<string> {
-  const { join } = await import("node:path");
-  return join(await paseoHome(), "worktrees");
+export function paseoOwnedWorktreeRoot(): string {
+  return join(paseoHome(), "worktrees");
 }
 
-/** `path.resolve`, reached the same lazy way as everything else here. */
-export async function resolvePath(path: string): Promise<string> {
-  const { resolve } = await import("node:path");
+export function resolvePath(path: string): string {
   return resolve(path);
 }
 
@@ -86,9 +68,7 @@ function asString(value: unknown): string | null {
  * because a stale read means duplicate rows.
  */
 export async function readRegistry(): Promise<RegistrySnapshot> {
-  const { readFile } = await import("node:fs/promises");
-  const { join, resolve } = await import("node:path");
-  const file = join(await paseoHome(), "projects", "workspaces.json");
+  const file = join(paseoHome(), "projects", "workspaces.json");
 
   const raw = await readFile(file, "utf8");
   const parsed: unknown = JSON.parse(raw);
@@ -120,7 +100,6 @@ export async function readRegistry(): Promise<RegistrySnapshot> {
 
 /** Every project Paseo knows. This is the plugin's whole discovery anchor. */
 export async function listProjects(): Promise<PaseoProject[]> {
-  const { resolve } = await import("node:path");
   const { stdout } = await run("paseo", ["project", "ls", "--json"]);
   const parsed: unknown = JSON.parse(stdout);
   const rows = Array.isArray(parsed) ? parsed : [];
@@ -171,7 +150,6 @@ export async function createWorkspace(input: {
 
 /** Absolute path of a repo's git common directory, which always exists. */
 export async function gitCommonDir(repoRoot: string): Promise<string> {
-  const { resolve } = await import("node:path");
   const { stdout } = await run("git", [
     "-C",
     repoRoot,
@@ -196,7 +174,6 @@ export async function gitWorktreePorcelain(repoRoot: string): Promise<string> {
 
 /** Directory creation time in ms, or null when the platform reports none. */
 export async function directoryBirthtimeMs(path: string): Promise<number | null> {
-  const { stat } = await import("node:fs/promises");
   try {
     const info = await stat(path);
     return info.birthtimeMs || null;
