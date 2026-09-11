@@ -11,6 +11,15 @@ type Handler<Api extends { subscribe(handler: never): unknown }> = Parameters<
 type WorkspaceUpdate = Handler<PaseoApi["workspaces"]>;
 
 /**
+ * The host validates a button id against `^[a-z][a-z0-9-]*$` and throws when it
+ * does not match. A workspace id is `wks_98f55a52f5fdd326`, so the underscore
+ * has to go. The mapping stays one-to-one, because only `_` is replaced.
+ */
+function buttonId(workspaceId: string): string {
+  return `paseo-tweaks-usage-${workspaceId.toLowerCase().replace(/[^a-z0-9-]/g, "-")}`;
+}
+
+/**
  * One header button per live workspace. The button is icon-only and runs
  * nothing until its popover opens, so the cost of a workspace is a registration
  * and no process.
@@ -36,18 +45,23 @@ export function registerUsageTweak(client: PluginClientContext, binaryPath: stri
 
   const addButton = (workspaceId: string) => {
     if (stopped || buttons.has(workspaceId)) return;
-    buttons.set(
-      workspaceId,
-      client.addHeaderButton({
-        id: `paseo-tweaks-usage-${workspaceId}`,
+    try {
+      buttons.set(
         workspaceId,
-        button: {
-          title: "Usage",
-          icon: "Gauge",
-          behavior: { kind: "popover", Content },
-        },
-      }),
-    );
+        client.addHeaderButton({
+          id: buttonId(workspaceId),
+          workspaceId,
+          button: {
+            title: "Usage",
+            icon: "Gauge",
+            behavior: { kind: "popover", Content },
+          },
+        }),
+      );
+    } catch (error) {
+      // A throw here must not take the workspace subscription with it.
+      console.error("[paseo-tweaks] header button add failed", workspaceId, error);
+    }
   };
 
   client.paseo.workspaces
