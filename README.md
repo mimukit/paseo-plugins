@@ -11,6 +11,7 @@ Paseo is the client I drive Claude Code from. These plugins bend it toward my wo
 | --- | --- | --- |
 | [kit-launcher](plugins/kit-launcher/) | Sends any `/kitname` prompt to the focused agent from the Command Center or a composer pill | Loads on Paseo 0.8; surfaces not yet hand-tested |
 | [worktree-sync](plugins/worktree-sync/) | Registers git worktrees of known Paseo projects as workspaces, so worktrees made outside Paseo appear in the sidebar | Loads on Paseo 0.8 and reconciles; surfaces not yet hand-tested |
+| [paseo-tweaks](plugins/paseo-tweaks/) | Small UI tweaks in one plugin, starting with a header button whose popover shows this host's Claude Code usage | Typechecks on Paseo 0.8; not yet hand-tested |
 
 Add a row when a plugin lands. Keep the description to one line.
 
