@@ -10,6 +10,9 @@ type Handler<Api extends { subscribe(handler: never): unknown }> = Parameters<
 /** Discriminated on `kind`, the same shape the kit-launcher tracker consumes. */
 type WorkspaceUpdate = Handler<PaseoApi["workspaces"]>;
 
+/** The handle a subscribing `list` returns from Paseo 0.10 on. */
+type OwnedSubscription = { release(): Promise<void> };
+
 /**
  * The host validates a button id against `^[a-z][a-z0-9-]*$` and throws when it
  * does not match. A workspace id is `wks_98f55a52f5fdd326`, so the underscore
@@ -64,13 +67,6 @@ export function registerUsageTweak(client: PluginClientContext, binaryPath: stri
     }
   };
 
-  client.paseo.workspaces
-    .list()
-    .then((result) => {
-      for (const workspace of result?.entries ?? []) addButton(workspace.id);
-    })
-    .catch((error: unknown) => console.error("[paseo-tweaks] workspace list failed", error));
-
   const unsubscribe = client.paseo.workspaces.subscribe((update: WorkspaceUpdate) => {
     // The remove branch carries the workspace id as `id`; the upsert branch
     // nests the snapshot. Both are the same discriminated union.
@@ -78,9 +74,31 @@ export function registerUsageTweak(client: PluginClientContext, binaryPath: stri
     else addButton(update.workspace.id);
   });
 
+  // From Paseo 0.10, `subscribe` hears only the streams this plugin opens, so
+  // a plain `list()` left every workspace created after load without a button.
+  // The 0.8.0 SDK types do not declare the owned subscription the host returns.
+  let subscription: OwnedSubscription | undefined;
+  const releaseSubscription = () => {
+    subscription
+      ?.release()
+      .catch((error: unknown) => console.error("[paseo-tweaks] workspace release failed", error));
+    subscription = undefined;
+  };
+
+  client.paseo.workspaces
+    .list({ subscribe: {} })
+    .then((result) => {
+      subscription = (result as { subscription?: OwnedSubscription }).subscription;
+      // A reload that lands before the list returns must not keep the stream.
+      if (stopped) releaseSubscription();
+      for (const workspace of result?.entries ?? []) addButton(workspace.id);
+    })
+    .catch((error: unknown) => console.error("[paseo-tweaks] workspace list failed", error));
+
   return () => {
     stopped = true;
     unsubscribe();
+    releaseSubscription();
     for (const workspaceId of [...buttons.keys()]) removeButton(workspaceId);
   };
 }
