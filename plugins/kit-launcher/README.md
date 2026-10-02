@@ -28,6 +28,8 @@ Selecting an entry or tapping a pill sends the bare command at once. Paseo 0.8.0
 
 The pill gate is the plugin's only server code. `server/git.ts` runs `git status --porcelain` through one RPC contract, `git.status` in `shared/rpc.ts`, with the directory passed as an array argument. A directory is re-checked when an agent changes status, when its workspace reports a new diff, and every 15 seconds as a backstop, with a floor of one check per directory every 2 seconds. A non-git directory and a failed call both read as clean, so the pill stays hidden.
 
+The tracker opens its agent and workspace streams with `list({ subscribe: {} })` and releases both handles on cleanup. From Paseo 0.10, `subscribe()` is a local listener that hears only the streams the plugin opened. A plain `list()` is a snapshot, so with it an agent started after the plugin loaded never got a pill, and the status and diff triggers never fired.
+
 A plugin reload disposes the old client-side instance, and the host drops that instance's pills before it awaits the plugin's own cleanup. A pill added in that window belongs to a dead instance and stays on the composer until the app restarts. The client contribution therefore sets a `stopped` flag as the first line of its cleanup, and refuses every later add. Duplicate `/commitkit` pills, one per reload, are the symptom of missing that flag.
 
 The same missing API rules out a pill that opens the built-in slash-command menu. A pill sends a prompt; it cannot put a `/` in the input box. Checked again against Paseo 0.8.0: `PluginClientContext` carries `paseo`, `rpc`, `openSurface`, `openSettings`, `openPanel` and twelve `add*` registrations, and nothing that writes the composer.

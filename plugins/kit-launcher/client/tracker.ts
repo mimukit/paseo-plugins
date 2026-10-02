@@ -17,6 +17,9 @@ type AgentUpdate = Handler<PaseoApi["agents"]>;
 type AgentSnapshot = Extract<AgentUpdate, { kind: "upsert" }>["agent"];
 type WorkspaceUpdate = Handler<PaseoApi["workspaces"]>;
 
+/** The handle a subscribing `list` returns from Paseo 0.10 on. */
+type OwnedSubscription = { release(): Promise<void> };
+
 /** One live agent and the directory whose working tree decides the pill. */
 type TrackedAgent = { workspaceId: string; cwd: string; status: string | null };
 
@@ -177,12 +180,39 @@ export function startPillTracker(client: PluginClientContext): PluginCleanup {
     if (!previous || previous.cwd !== cwd || previous.status !== status) requestRefresh(cwd);
   };
 
+  // From Paseo 0.10, `subscribe` hears only the streams this plugin opens. A
+  // plain `list()` is a snapshot, so an agent started after load never got a
+  // pill. The 0.8.0 SDK types do not declare the owned subscription the host
+  // returns, so the handles are typed locally.
+  const subscriptions = new Set<OwnedSubscription>();
+  const release = (subscription: OwnedSubscription) => {
+    subscriptions.delete(subscription);
+    subscription
+      .release()
+      .catch((error: unknown) => console.error("[kit-launcher] stream release failed", error));
+  };
+  const own = (result: unknown) => {
+    const subscription = (result as { subscription?: OwnedSubscription }).subscription;
+    if (!subscription) return;
+    // A reload that lands before the list returns must not keep the stream.
+    if (stopped) release(subscription);
+    else subscriptions.add(subscription);
+  };
+
   agents
-    .list()
+    .list({ subscribe: {} })
     .then((result) => {
+      own(result);
       for (const entry of result?.entries ?? []) trackAgent(entry.agent);
     })
     .catch((error: unknown) => console.error("[kit-launcher] agent list failed", error));
+
+  // The tracker reads no workspace snapshot. It opens the stream only so that
+  // workspace updates reach the handler below.
+  workspaces
+    .list({ subscribe: {} })
+    .then(own)
+    .catch((error: unknown) => console.error("[kit-launcher] workspace list failed", error));
 
   const unsubscribeAgents = agents.subscribe((update: AgentUpdate) => {
     if (update.kind === "remove") dropAgent(update.agentId);
@@ -212,6 +242,7 @@ export function startPillTracker(client: PluginClientContext): PluginCleanup {
     scheduled.clear();
     unsubscribeAgents();
     unsubscribeWorkspaces();
+    for (const subscription of [...subscriptions]) release(subscription);
     for (const agentId of [...pills.keys()]) removePillFor(agentId);
   };
 }
